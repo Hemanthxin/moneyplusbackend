@@ -61,6 +61,18 @@ app.add_middleware(
 )
 
 
+@app.options("/api/{rest_of_path:path}")
+async def preflight(rest_of_path: str):
+    allowed_origins = ",".join(settings.frontend_origins) if settings.frontend_origins else "*"
+    headers = {
+        "Access-Control-Allow-Origin": allowed_origins,
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS,PUT,DELETE",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization",
+        "Access-Control-Allow-Credentials": "true",
+    }
+    return Response(status_code=200, headers=headers)
+
+
 def build_session_payload(user: User) -> dict[str, str]:
     return {
         "mobile": user.mobile,
