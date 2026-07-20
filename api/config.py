@@ -67,7 +67,9 @@ def load_env_file(path: Path) -> dict[str, str]:
             continue
 
         key, value = line.split("=", 1)
-        values[key.strip()] = value.strip().strip("\"'")
+        key = key.strip()
+        value = value.strip().strip("\"'")
+        values[key] = value
 
     return values
 

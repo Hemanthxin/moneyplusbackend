@@ -1,24 +1,41 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
+import sys
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .config import settings
-from .db import Base, engine, get_db
-from .models import OtpSession, Product, User
-from .schemas import (
-    DashboardPayload,
-    RegisterUserRequest,
-    RegisterUserResponse,
-    SendOtpRequest,
-    SendOtpResponse,
-    VerifyOtpRequest,
-    VerifyOtpResponse,
-)
-from .seed import ensure_database_schema, seed_database
-
+if __package__ in (None, ""):
+    sys.path.append(str(Path(__file__).resolve().parent.parent))
+    from app.config import settings
+    from app.db import Base, engine, get_db
+    from app.models import OtpSession, Product, User
+    from app.schemas import (
+        DashboardPayload,
+        RegisterUserRequest,
+        RegisterUserResponse,
+        SendOtpRequest,
+        SendOtpResponse,
+        VerifyOtpRequest,
+        VerifyOtpResponse,
+    )
+    from app.seed import ensure_database_schema, seed_database
+else:
+    from .config import settings
+    from .db import Base, engine, get_db
+    from .models import OtpSession, Product, User
+    from .schemas import (
+        DashboardPayload,
+        RegisterUserRequest,
+        RegisterUserResponse,
+        SendOtpRequest,
+        SendOtpResponse,
+        VerifyOtpRequest,
+        VerifyOtpResponse,
+    )
+    from .seed import ensure_database_schema, seed_database
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -99,7 +116,14 @@ async def verify_otp(payload: VerifyOtpRequest, db: AsyncSession = Depends(get_d
     await db.execute(delete(OtpSession).where(OtpSession.mobile == payload.mobile))
     await db.commit()
 
-    if not user or not user.onboarding_completed:
+    if not user:
+        return VerifyOtpResponse(
+            message="OTP verified. Complete your onboarding to continue.",
+            onboarding_required=True,
+            session=None,
+        )
+
+    if not user.onboarding_completed:
         return VerifyOtpResponse(
             message="OTP verified. Complete your onboarding to continue.",
             onboarding_required=True,
@@ -210,3 +234,9 @@ async def dashboard_overview(
             for product in products
         ],
     )
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=False)
