@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,9 +57,20 @@ def split_full_name(full_name: str) -> tuple[str, str | None]:
     return first_name, last_name
 
 
+@app.get("/")
+async def root() -> dict[str, str]:
+    return {"status": "ok", "message": "MoneyPlus API is running"}
+
+
 @app.get("/health")
 async def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/favicon.ico")
+@app.get("/favicon.png")
+async def favicon() -> Response:
+    return Response(status_code=204)
 
 
 @app.post("/api/auth/send-otp", response_model=SendOtpResponse)
