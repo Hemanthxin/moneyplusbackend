@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 import sys
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,6 +54,7 @@ app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.frontend_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost(:\d+)?|http://127\.0\.0\.1(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -74,9 +75,20 @@ def split_full_name(full_name: str) -> tuple[str, str | None]:
     return first_name, last_name
 
 
+@app.get("/")
+async def root() -> dict[str, str]:
+    return {"status": "ok", "message": "MoneyPlus API is running"}
+
+
 @app.get("/health")
 async def healthcheck() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/favicon.ico")
+@app.get("/favicon.png")
+async def favicon() -> Response:
+    return Response(status_code=204)
 
 
 @app.post("/api/auth/send-otp", response_model=SendOtpResponse)

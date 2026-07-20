@@ -85,9 +85,9 @@ class Settings:
         self.environment = get("ENVIRONMENT", "development")
         self.debug = parse_bool(get("DEBUG", "true"))
         self.database_url, self.database_connect_args = build_database_config(
-            get("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/moneyplus")
+            get("DATABASE_URL", "postgresql://neondb_owner:npg_wO0HGIVAUM5s@ep-raspy-unit-awlqh8f4-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
         )
-        self.frontend_url = get("FRONTEND_URL", "http://localhost:5173")
+        self.frontend_url = get("FRONTEND_URL", "https://moneyplus.vercel.app")
         frontend_urls_raw = get("FRONTEND_URLS", self.frontend_url)
         self.frontend_origins = [origin.strip() for origin in frontend_urls_raw.split(",") if origin.strip()]
         self.dev_demo_otp = get("DEV_DEMO_OTP", "123456")
