@@ -1,2 +1,16 @@
+[project]
+name = "moneyplus-backend"
+version = "0.1.0"
+description = "MoneyPlus FastAPI backend"
+readme = "../README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "fastapi==0.115.5",
+  "uvicorn[standard]==0.32.1",
+  "sqlalchemy==2.0.36",
+  "asyncpg==0.30.0",
+  "alembic==1.14.0",
+]
+
 [tool.vercel]
 entrypoint = "main:app"
