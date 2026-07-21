@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 import sys
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,7 +54,7 @@ app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.frontend_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost(:\d+)?|http://127\.0\.0\.1(:\d+)?",
+    allow_origin_regex=r"https://.*|http://.*|http://localhost(:\d+)?|http://127\.0\.0\.1(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -62,20 +62,24 @@ app.add_middleware(
 
 
 @app.options("/api/{rest_of_path:path}")
-async def preflight(rest_of_path: str):
+async def preflight(request: Request, rest_of_path: str):
     """Return explicit CORS headers for any /api/* preflight request.
 
     Some hosting layers (Vercel) may answer OPTIONS before forwarding
     to the function. Adding this route ensures our FastAPI app always
     emits the required headers when the preflight reaches it.
     """
-    allowed_origins = ",".join(settings.frontend_origins) if settings.frontend_origins else "*"
+    origin = request.headers.get("origin")
     headers = {
-        "Access-Control-Allow-Origin": allowed_origins,
         "Access-Control-Allow-Methods": "GET,POST,OPTIONS,PUT,DELETE",
         "Access-Control-Allow-Headers": "Content-Type,Authorization",
         "Access-Control-Allow-Credentials": "true",
     }
+    if origin:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Vary"] = "Origin"
+    else:
+        headers["Access-Control-Allow-Origin"] = "*"
     return Response(status_code=200, headers=headers)
 
 
