@@ -1,18 +1,21 @@
 from contextlib import asynccontextmanager
+import logging
 from pathlib import Path
 import sys
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+logger = logging.getLogger("moneyplus")
+
 if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parent.parent))
-    from app.config import settings
-    from app.db import Base, engine, get_db
-    from app.models import OtpSession, Product, User
-    from app.schemas import (
+    from api.config import settings
+    from api.db import Base, engine, get_db
+    from api.models import OtpSession, Product, User
+    from api.schemas import (
         DashboardPayload,
         RegisterUserRequest,
         RegisterUserResponse,
@@ -21,7 +24,7 @@ if __package__ in (None, ""):
         VerifyOtpRequest,
         VerifyOtpResponse,
     )
-    from app.seed import ensure_database_schema, seed_database
+    from api.seed import ensure_database_schema, seed_database
 else:
     from .config import settings
     from .db import Base, engine, get_db
@@ -39,12 +42,19 @@ else:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-        await ensure_database_schema(connection)
+    # Startup runs on every cold start of this serverless function. If Neon is
+    # waking from suspend (or has a transient hiccup) this must not raise, or
+    # Vercel returns a bare error page with no CORS headers - the browser then
+    # reports the request as "Failed to fetch" instead of a real error.
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+            await ensure_database_schema(connection)
 
-    async with AsyncSession(engine, expire_on_commit=False) as session:
-        await seed_database(session)
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            await seed_database(session)
+    except Exception:
+        logger.exception("Startup schema/seed step failed; continuing so the API can still respond")
 
     yield
 
@@ -54,33 +64,11 @@ app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.frontend_origins,
-    allow_origin_regex=r"https://.*|http://.*|http://localhost(:\d+)?|http://127\.0\.0\.1(:\d+)?",
+    allow_origin_regex=r"http://localhost(:\d+)?|http://127\.0\.0\.1(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.options("/api/{rest_of_path:path}")
-async def preflight(request: Request, rest_of_path: str):
-    """Return explicit CORS headers for any /api/* preflight request.
-
-    Some hosting layers (Vercel) may answer OPTIONS before forwarding
-    to the function. Adding this route ensures our FastAPI app always
-    emits the required headers when the preflight reaches it.
-    """
-    origin = request.headers.get("origin")
-    headers = {
-        "Access-Control-Allow-Methods": "GET,POST,OPTIONS,PUT,DELETE",
-        "Access-Control-Allow-Headers": "Content-Type,Authorization",
-        "Access-Control-Allow-Credentials": "true",
-    }
-    if origin:
-        headers["Access-Control-Allow-Origin"] = origin
-        headers["Vary"] = "Origin"
-    else:
-        headers["Access-Control-Allow-Origin"] = "*"
-    return Response(status_code=200, headers=headers)
 
 
 def build_session_payload(user: User) -> dict[str, str]:
@@ -261,4 +249,4 @@ async def dashboard_overview(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run("api.main:app", host="127.0.0.1", port=8000, reload=False)

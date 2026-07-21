@@ -81,14 +81,17 @@ async def ensure_database_schema(connection: AsyncConnection) -> None:
         await connection.execute(text(statement))
 
 
+DEMO_MOBILE = "9876543210"
+
+
 async def seed_database(session: AsyncSession) -> None:
-    user_exists = await session.scalar(select(User.id).where(User.mobile == "9876543210"))
-    if not user_exists:
+    demo_user = await session.scalar(select(User).where(User.mobile == DEMO_MOBILE))
+    if not demo_user:
         session.add(
             User(
                 first_name="Arjun",
                 last_name="Sharma",
-                mobile="9876543210",
+                mobile=DEMO_MOBILE,
                 role="Financial Partner",
                 credit_score=742,
                 credit_label="Good",
@@ -96,6 +99,11 @@ async def seed_database(session: AsyncSession) -> None:
                 onboarding_completed=True,
             )
         )
+    elif not demo_user.onboarding_completed:
+        # A later schema migration added onboarding_completed with a NOT NULL
+        # DEFAULT FALSE, which silently flipped this already-seeded demo user
+        # back to "incomplete". Self-heal it so the demo login keeps working.
+        demo_user.onboarding_completed = True
 
     existing_products = await session.scalar(select(Product.id))
     if not existing_products:
