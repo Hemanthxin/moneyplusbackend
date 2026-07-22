@@ -28,14 +28,7 @@ class SendOtpResponse(BaseModel):
 class RegisterUserRequest(BaseModel):
     mobile: str = Field(min_length=10, max_length=10, pattern=r"^\d{10}$")
     full_name: str = Field(min_length=2, max_length=120)
-    pan_number: str = Field(min_length=10, max_length=10, pattern=r"^[A-Z]{5}[0-9]{4}[A-Z]$")
-    aadhaar_number: str = Field(min_length=12, max_length=12, pattern=r"^\d{12}$")
-    date_of_birth: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
-    permanent_address: str = Field(min_length=10, max_length=500)
-    current_address: str = Field(min_length=10, max_length=500)
-    same_as_permanent: bool = False
-    reference_number: str | None = Field(default=None, max_length=50)
-    selfie_image: str = Field(min_length=30)
+    email: str = Field(min_length=5, max_length=255, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class RegisterUserResponse(BaseModel):
@@ -53,14 +46,8 @@ class UserPayload(BaseModel):
     first_name: str
     last_name: str | None = None
     mobile: str
+    email: str | None = None
     role: str
-    date_of_birth: str | None = None
-    pan_number: str | None = None
-    aadhaar_number: str | None = None
-    permanent_address: str | None = None
-    current_address: str | None = None
-    same_as_permanent: bool = False
-    reference_number: str | None = None
     onboarding_completed: bool = False
 
 

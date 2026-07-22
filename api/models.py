@@ -14,6 +14,7 @@ class User(Base):
     first_name: Mapped[str] = mapped_column(String(80), nullable=False)
     last_name: Mapped[str | None] = mapped_column(String(80), nullable=True)
     mobile: Mapped[str] = mapped_column(String(10), unique=True, index=True, nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     role: Mapped[str] = mapped_column(String(50), default="Associate", nullable=False)
     credit_score: Mapped[int] = mapped_column(Integer, default=742, nullable=False)
     credit_label: Mapped[str] = mapped_column(String(30), default="Good", nullable=False)

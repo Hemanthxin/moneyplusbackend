@@ -149,22 +149,9 @@ async def verify_otp(payload: VerifyOtpRequest, db: AsyncSession = Depends(get_d
 
 @app.post("/api/auth/register", response_model=RegisterUserResponse)
 async def register_user(payload: RegisterUserRequest, db: AsyncSession = Depends(get_db)) -> RegisterUserResponse:
-    if not payload.selfie_image.startswith("data:image/"):
-        raise HTTPException(status_code=422, detail="Please upload a valid selfie image")
-
     first_name, last_name = split_full_name(payload.full_name)
-    current_address = payload.permanent_address if payload.same_as_permanent else payload.current_address
 
     existing_user = await db.scalar(select(User).where(User.mobile == payload.mobile))
-    pan_user = await db.scalar(select(User).where(User.pan_number == payload.pan_number, User.mobile != payload.mobile))
-    aadhaar_user = await db.scalar(
-        select(User).where(User.aadhaar_number == payload.aadhaar_number, User.mobile != payload.mobile)
-    )
-
-    if pan_user:
-        raise HTTPException(status_code=409, detail="PAN card number is already linked to another user")
-    if aadhaar_user:
-        raise HTTPException(status_code=409, detail="Aadhaar number is already linked to another user")
 
     if existing_user:
         user = existing_user
@@ -182,14 +169,7 @@ async def register_user(payload: RegisterUserRequest, db: AsyncSession = Depends
 
     user.first_name = first_name
     user.last_name = last_name
-    user.pan_number = payload.pan_number
-    user.aadhaar_number = payload.aadhaar_number
-    user.date_of_birth = payload.date_of_birth
-    user.permanent_address = payload.permanent_address
-    user.current_address = current_address
-    user.same_as_permanent = payload.same_as_permanent
-    user.reference_number = payload.reference_number
-    user.selfie_image = payload.selfie_image
+    user.email = payload.email
     user.onboarding_completed = True
 
     await db.commit()
@@ -219,14 +199,8 @@ async def dashboard_overview(
             "first_name": user.first_name,
             "last_name": user.last_name,
             "mobile": user.mobile,
+            "email": user.email,
             "role": user.role,
-            "date_of_birth": user.date_of_birth,
-            "pan_number": user.pan_number,
-            "aadhaar_number": user.aadhaar_number,
-            "permanent_address": user.permanent_address,
-            "current_address": user.current_address,
-            "same_as_permanent": user.same_as_permanent,
-            "reference_number": user.reference_number,
             "onboarding_completed": user.onboarding_completed,
         },
         credit_score={
