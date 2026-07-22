@@ -71,3 +71,4 @@ class Lender(Base):
     amount_max: Mapped[int] = mapped_column(Integer, nullable=False)
     amount_label: Mapped[str] = mapped_column(String(30), nullable=False)
     min_salary: Mapped[int] = mapped_column(Integer, nullable=False)
+    logo_url: Mapped[str | None] = mapped_column(Text, nullable=True)

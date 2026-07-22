@@ -67,6 +67,7 @@ class DashboardPayload(BaseModel):
 class LenderPayload(BaseModel):
     rank: int
     name: str
+    logo_url: str | None = None
     roi_min: float
     roi_max: float
     roi_label: str

@@ -85,6 +85,24 @@ LENDER_RAW = [
     ("SHRI RAM FINANCE", "13 TO 35%", "25T TO 30L", 25000, "Personal Loan"),
 ]
 
+# Public logo files from Wikimedia Commons, keyed by the lender name above.
+# A few smaller NBFCs (InCred, Poonawalla, Finnable) don't have a usable
+# free-use logo file available, so they fall back to the initial badge.
+LENDER_LOGOS = {
+    "HDFC BANK": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/HDFC_Bank_Logo.svg/250px-HDFC_Bank_Logo.svg.png",
+    "ICICI BANK": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/ICICI_Bank_Logo.svg/250px-ICICI_Bank_Logo.svg.png",
+    "AXIS BANK": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/AXISBank_Logo.svg/250px-AXISBank_Logo.svg.png",
+    "KOTAK BANK": "https://upload.wikimedia.org/wikipedia/en/thumb/3/3b/Kotak_Mahindra_Bank_logo.svg/250px-Kotak_Mahindra_Bank_logo.svg.png",
+    "INDUSIND BANK": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/IndusInd_Bank_SVG_Logo.svg/250px-IndusInd_Bank_SVG_Logo.svg.png",
+    "IDFC BANK": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Logo_of_IDFC_First_Bank.svg/250px-Logo_of_IDFC_First_Bank.svg.png",
+    "BANDHAN BANK": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Bandhan_Bank_Svg_Logo.svg/250px-Bandhan_Bank_Svg_Logo.svg.png",
+    "BAJAJ FINANCE": "https://upload.wikimedia.org/wikipedia/en/thumb/8/8b/Bajaj_Finance_Logo_2025.svg/250px-Bajaj_Finance_Logo_2025.svg.png",
+    "PRIMAL FINANCE": "https://upload.wikimedia.org/wikipedia/en/thumb/d/dc/Piramal_Finance_logo.svg/250px-Piramal_Finance_logo.svg.png",
+    "CHOLA FINANCE": "https://upload.wikimedia.org/wikipedia/en/thumb/1/14/Cholamandalam_Investment_and_Finance_Company.svg/250px-Cholamandalam_Investment_and_Finance_Company.svg.png",
+    "AXIS FINANCE": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/AXISBank_Logo.svg/250px-AXISBank_Logo.svg.png",
+    "SHRI RAM FINANCE": "https://upload.wikimedia.org/wikipedia/en/thumb/c/cf/Shriram_Group.svg/250px-Shriram_Group.svg.png",
+}
+
 _AMOUNT_UNITS = {"T": 1_000, "L": 100_000, "CR": 10_000_000}
 
 
@@ -125,6 +143,7 @@ def _build_lender_seed() -> list[dict]:
                 "amount_max": amount_max,
                 "amount_label": f"₹{_format_amount_token(amount_min)} - ₹{_format_amount_token(amount_max)}",
                 "min_salary": min_salary,
+                "logo_url": LENDER_LOGOS.get(name),
             }
         )
     return rows
@@ -146,6 +165,7 @@ USER_TABLE_PATCHES = [
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT FALSE NOT NULL",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW() NOT NULL",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW() NOT NULL",
+    "ALTER TABLE lenders ADD COLUMN IF NOT EXISTS logo_url TEXT",
 ]
 
 

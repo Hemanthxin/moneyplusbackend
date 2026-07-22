@@ -241,6 +241,7 @@ async def get_offers(
         LenderPayload(
             rank=lender.rank,
             name=lender.name,
+            logo_url=lender.logo_url,
             roi_min=lender.roi_min,
             roi_max=lender.roi_max,
             roi_label=lender.roi_label,
