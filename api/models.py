@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -55,3 +55,19 @@ class Product(Base):
     title: Mapped[str] = mapped_column(String(80), nullable=False)
     subtitle: Mapped[str] = mapped_column(String(160), nullable=False)
     features: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+
+
+class Lender(Base):
+    __tablename__ = "lenders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)
+    product_title: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    roi_min: Mapped[float] = mapped_column(Float, nullable=False)
+    roi_max: Mapped[float] = mapped_column(Float, nullable=False)
+    roi_label: Mapped[str] = mapped_column(String(30), nullable=False)
+    amount_min: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount_max: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount_label: Mapped[str] = mapped_column(String(30), nullable=False)
+    min_salary: Mapped[int] = mapped_column(Integer, nullable=False)

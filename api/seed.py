@@ -1,7 +1,9 @@
+import re
+
 from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
 
-from .models import Product, User
+from .models import Lender, Product, User
 
 
 PRODUCT_SEED = [
@@ -61,6 +63,76 @@ PRODUCT_SEED = [
     },
 ]
 
+# Raw rows straight from the partner-supplied rate sheet: (name, ROI range text,
+# loan amount range text, minimum monthly salary, loan type). Kept as the
+# original short-hand ("25T", "1CR", "1L") and parsed below rather than
+# hand-transcribed as numbers, so the seed data matches the source exactly.
+LENDER_RAW = [
+    ("HDFC BANK", "9.99 TO 18%", "25T TO 1CR", 25000, "Personal Loan"),
+    ("ICICI BANK", "9.99 TO 18%", "1L TO 1CR", 25000, "Personal Loan"),
+    ("AXIS BANK", "9.99 TO 20%", "25T TO 1CR", 25000, "Personal Loan"),
+    ("KOTAK BANK", "9.99 TO 22%", "50T TO 1CR", 25000, "Personal Loan"),
+    ("INDUSIND BANK", "9.99 TO 25%", "50T TO 1CR", 25000, "Personal Loan"),
+    ("IDFC BANK", "9.99 TO 25%", "50T TO 1CR", 20000, "Personal Loan"),
+    ("BANDHAN BANK", "10.85 TO 25%", "50T TO 25L", 25000, "Personal Loan"),
+    ("BAJAJ FINANCE", "10.85 TO 30%", "25T TO 1CR", 25000, "Personal Loan"),
+    ("INCREAD FINANCE", "13 TO 35%", "25T TO 15L", 15000, "Personal Loan"),
+    ("PRIMAL FINANCE", "13 TO 35%", "25T TO 50L", 20000, "Personal Loan"),
+    ("POONAWALA", "13 TO 35%", "25T TO 60L", 25000, "Personal Loan"),
+    ("CHOLA FINANCE", "13 TO 35%", "25T TO 50L", 25000, "Personal Loan"),
+    ("FINNABLE FINANCE", "13 TO 35%", "25T TO 15L", 20000, "Personal Loan"),
+    ("AXIS FINANCE", "13 TO 35%", "25T TO 50L", 25000, "Personal Loan"),
+    ("SHRI RAM FINANCE", "13 TO 35%", "25T TO 30L", 25000, "Personal Loan"),
+]
+
+_AMOUNT_UNITS = {"T": 1_000, "L": 100_000, "CR": 10_000_000}
+
+
+def _parse_amount_token(token: str) -> int:
+    match = re.match(r"([\d.]+)\s*(T|L|CR)", token.strip().upper())
+    if not match:
+        raise ValueError(f"Unrecognized amount token: {token!r}")
+    value, unit = match.groups()
+    return round(float(value) * _AMOUNT_UNITS[unit])
+
+
+def _format_amount_token(rupees: int) -> str:
+    for unit, factor in (("CR", 10_000_000), ("L", 100_000), ("T", 1_000)):
+        if rupees % factor == 0:
+            return f"{rupees // factor}{unit}"
+    return str(rupees)
+
+
+def _parse_range(text_value: str, parser) -> tuple[float, float]:
+    low_text, high_text = (part.strip() for part in re.split(r"TO|-", text_value, maxsplit=1))
+    return parser(low_text), parser(high_text)
+
+
+def _build_lender_seed() -> list[dict]:
+    rows = []
+    for rank, (name, roi_text, amount_text, min_salary, product_title) in enumerate(LENDER_RAW, start=1):
+        roi_min, roi_max = _parse_range(roi_text, lambda part: float(part.rstrip("%")))
+        amount_min, amount_max = _parse_range(amount_text, _parse_amount_token)
+        rows.append(
+            {
+                "rank": rank,
+                "product_title": product_title,
+                "name": name,
+                "roi_min": roi_min,
+                "roi_max": roi_max,
+                "roi_label": f"{roi_min:g}% - {roi_max:g}%",
+                "amount_min": amount_min,
+                "amount_max": amount_max,
+                "amount_label": f"₹{_format_amount_token(amount_min)} - ₹{_format_amount_token(amount_max)}",
+                "min_salary": min_salary,
+            }
+        )
+    return rows
+
+
+LENDER_SEED = _build_lender_seed()
+
+
 USER_TABLE_PATCHES = [
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS pan_number VARCHAR(10)",
@@ -110,5 +182,10 @@ async def seed_database(session: AsyncSession) -> None:
     if not existing_products:
         await session.execute(delete(Product))
         session.add_all([Product(**product) for product in PRODUCT_SEED])
+
+    # Rate-sheet data changes independently of a schema migration, so keep it
+    # fully in sync with LENDER_SEED on every startup rather than seeding once.
+    await session.execute(delete(Lender))
+    session.add_all([Lender(**lender) for lender in LENDER_SEED])
 
     await session.commit()

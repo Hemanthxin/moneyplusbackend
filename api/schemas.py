@@ -62,3 +62,23 @@ class DashboardPayload(BaseModel):
     user: UserPayload
     credit_score: CreditScorePayload
     products: list[ProductPayload]
+
+
+class LenderPayload(BaseModel):
+    rank: int
+    name: str
+    roi_min: float
+    roi_max: float
+    roi_label: str
+    amount_min: int
+    amount_max: int
+    amount_label: str
+    min_salary: int
+    eligible: bool
+
+
+class OffersResponse(BaseModel):
+    product_title: str
+    total_count: int
+    eligible_count: int
+    offers: list[LenderPayload]

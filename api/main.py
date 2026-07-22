@@ -14,9 +14,11 @@ if __package__ in (None, ""):
     sys.path.append(str(Path(__file__).resolve().parent.parent))
     from api.config import settings
     from api.db import Base, engine, get_db
-    from api.models import OtpSession, Product, User
+    from api.models import Lender, OtpSession, Product, User
     from api.schemas import (
         DashboardPayload,
+        LenderPayload,
+        OffersResponse,
         RegisterUserRequest,
         RegisterUserResponse,
         SendOtpRequest,
@@ -28,9 +30,11 @@ if __package__ in (None, ""):
 else:
     from .config import settings
     from .db import Base, engine, get_db
-    from .models import OtpSession, Product, User
+    from .models import Lender, OtpSession, Product, User
     from .schemas import (
         DashboardPayload,
+        LenderPayload,
+        OffersResponse,
         RegisterUserRequest,
         RegisterUserResponse,
         SendOtpRequest,
@@ -217,6 +221,48 @@ async def dashboard_overview(
             }
             for product in products
         ],
+    )
+
+
+@app.get("/api/offers", response_model=OffersResponse)
+async def get_offers(
+    product: str = Query(..., min_length=1, max_length=80),
+    amount: int = Query(500_000, ge=0),
+    monthly_income: int = Query(50_000, ge=0),
+    db: AsyncSession = Depends(get_db),
+) -> OffersResponse:
+    lenders = (
+        await db.scalars(
+            select(Lender).where(Lender.product_title == product).order_by(Lender.rank.asc())
+        )
+    ).all()
+
+    offers = [
+        LenderPayload(
+            rank=lender.rank,
+            name=lender.name,
+            roi_min=lender.roi_min,
+            roi_max=lender.roi_max,
+            roi_label=lender.roi_label,
+            amount_min=lender.amount_min,
+            amount_max=lender.amount_max,
+            amount_label=lender.amount_label,
+            min_salary=lender.min_salary,
+            eligible=(
+                lender.amount_min <= amount <= lender.amount_max
+                and monthly_income >= lender.min_salary
+            ),
+        )
+        for lender in lenders
+    ]
+
+    eligible_offers = sorted((offer for offer in offers if offer.eligible), key=lambda offer: offer.roi_min)
+
+    return OffersResponse(
+        product_title=product,
+        total_count=len(offers),
+        eligible_count=len(eligible_offers),
+        offers=eligible_offers,
     )
 
 
